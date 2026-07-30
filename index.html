@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dual Track</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#12141C;
+    --surface:#1A1D28;
+    --surface2:#20242F;
+    --border:#2A2E3A;
+    --text:#EDEEF2;
+    --text-muted:#8A8F9C;
+    --py:#E8A33D;
+    --py-dim:#4A3B22;
+    --cine:#5EC9DB;
+    --cine-dim:#233A3F;
+    --ok:#6EDE8A;
+    --warn:#E8637A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(28px,5vw,40px);
+    margin:0 0 4px;
+    letter-spacing:-0.02em;
+  }
+  .tagline{
+    color:var(--text-muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:760px){.grid{grid-template-columns:1fr;}}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+  }
+  .card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .dot.py{background:var(--py);box-shadow:0 0 10px var(--py);}
+  .dot.cine{background:var(--cine);box-shadow:0 0 10px var(--cine);}
+  .card-head h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:18px;
+    margin:0;
+    font-weight:700;
+  }
+  .card-head .streak{
+    margin-left:auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    color:var(--text-muted);
+  }
+  .pulse-strip{
+    display:flex;
+    gap:3px;
+    margin:14px 0 10px;
+    flex-wrap:wrap;
+  }
+  .pulse-day{
+    width:14px;height:14px;border-radius:3px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    cursor:pointer;
+    transition:transform .1s;
+  }
+  .pulse-day:hover{transform:scale(1.15);}
+  .pulse-day.done{background:var(--py);border-color:var(--py);}
+  .pulse-day.today{outline:2px solid var(--text);outline-offset:1px;}
+  .hint{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
+  .checkpoints{display:flex;flex-direction:column;gap:8px;}
+  .cp{
+    display:flex;align-items:flex-start;gap:10px;
+    padding:10px 12px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:9px;
+    font-size:13px;
+  }
+  .cp.done{opacity:.55;}
+  .cp input[type=checkbox]{margin-top:2px;accent-color:var(--py);}
+  .cp .cp-title{flex:1;}
+  .cp .cp-confirm{
+    font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;
+    margin-top:3px;display:block;
+  }
+  .badge{
+    display:inline-block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    padding:2px 6px;
+    border-radius:5px;
+    margin-left:6px;
+  }
+  .badge.due{background:var(--warn);color:#1a0a0d;font-weight:700;}
+  .rail{display:flex;flex-direction:column;gap:0;margin-bottom:16px;}
+  .stop{
+    display:flex;align-items:flex-start;gap:12px;
+    position:relative;
+    padding-bottom:18px;
+  }
+  .stop:last-child{padding-bottom:0;}
+  .stop::before{
+    content:'';
+    position:absolute;
+    left:9px;top:20px;bottom:0;
+    width:2px;
+    background:var(--border);
+  }
+  .stop:last-child::before{display:none;}
+  .stop-marker{
+    width:20px;height:20px;border-radius:50%;
+    background:var(--surface2);
+    border:2px solid var(--border);
+    flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    font-weight:700;
+    color:var(--text-muted);
+    z-index:1;
+  }
+  .stop.current .stop-marker{background:var(--cine);border-color:var(--cine);color:#0a1f23;}
+  .stop.past .stop-marker{background:var(--ok);border-color:var(--ok);color:#0a1f0f;}
+  .stop-body{padding-top:1px;}
+  .stop-body .s-title{font-size:13px;font-weight:600;}
+  .stop-body .s-gate{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .field{margin-bottom:12px;}
+  .field label{
+    display:block;font-size:11px;color:var(--text-muted);
+    font-family:'JetBrains Mono',monospace;margin-bottom:5px;
+  }
+  .field input, .field textarea{
+    width:100%;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:9px 10px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+  }
+  .field textarea{resize:vertical;min-height:44px;}
+  .blocking-banner{
+    background:var(--cine-dim);
+    border:1px solid var(--cine);
+    border-radius:9px;
+    padding:10px 12px;
+    font-size:12px;
+    margin-bottom:14px;
+    color:var(--cine);
+  }
+  .blocking-banner.clear{display:none;}
+  .btn{
+    background:var(--cine);
+    color:#0a1f23;
+    border:none;
+    border-radius:8px;
+    padding:9px 14px;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .btn.py-btn{background:var(--py);color:#241a06;}
+  .btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
+  .session-log{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .session-item{
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:12px;
+  }
+  .session-item .s-date{font-family:'JetBrains Mono',monospace;color:var(--cine);font-size:11px;}
+  .footer-bar{
+    margin-top:18px;
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 20px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text-muted);
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .footer-bar .ai-off{color:var(--warn);font-weight:700;}
+  .empty{font-size:12px;color:var(--text-muted);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Dual Track</h1>
+    <div class="tagline">// python: daily pulse — cine: milestone rail</div>
+  </header>
+
+  <div class="grid">
+    <!-- PYTHON CARD -->
+    <div class="card">
+      <div class="card-head">
+        <div class="dot py"></div>
+        <h2>Python</h2>
+        <div class="streak" id="py-streak">streak: 0</div>
+      </div>
+      <div class="hint">Tap today's square when you've done unaided practice (AI off).</div>
+      <div class="pulse-strip" id="pulse-strip"></div>
+      <div class="checkpoints" id="checkpoints"></div>
+    </div>
+
+    <!-- CINE CARD -->
+    <div class="card">
+      <div class="card-head">
+        <div class="dot cine"></div>
+        <h2>Cine Spec-Piece</h2>
+        <div class="streak" id="cine-week">this wk: 0/2</div>
+      </div>
+      <div class="blocking-banner" id="blocking-banner">
+        Blocking: hero product + ship date not set. Per cine-spec-piece rule, the sprint hasn't started until both are answered.
+      </div>
+      <div class="field">
+        <label>Hero product (physical object, not a service)</label>
+        <input type="text" id="hero-product" placeholder="e.g. fragrance bottle, watch, sneaker">
+      </div>
+      <div class="field">
+        <label>Ship date (said out loud to someone)</label>
+        <input type="text" id="ship-date" placeholder="e.g. Sept 15">
+      </div>
+      <div class="field">
+        <label>Told to</label>
+        <input type="text" id="told-to" placeholder="who knows this date">
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="field">
+        <label>Log a session — 2-line handoff note</label>
+        <textarea id="session-note" placeholder="Done: ... / Next: ..."></textarea>
+      </div>
+      <div class="field">
+        <label>Hours this session</label>
+        <input type="number" id="session-hours" step="0.5" placeholder="2">
+      </div>
+      <button class="btn" id="log-session">Log session</button>
+      <div class="session-log" id="session-log"></div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <div>weekly total: <span id="week-total" style="color:var(--text)">0h</span></div>
+    <div class="ai-off">AI OFF during practice — non-negotiable</div>
+  </div>
+</div>
+
+<script>
+const KEY = 'dual-track-state';
+const CHECKPOINTS = [
+  {id:'cp1', title:'CP1 — variables/control flow/functions (CLI script solo)'},
+  {id:'cp2', title:'CP2 — data structures + string ops (parse/transform data solo)'},
+  {id:'cp3', title:'CP3 — file I/O + try/except (read/write, handle bad input, solo)'},
+  {id:'cp4', title:'CP4 — basic OOP (model one thing as a class, explain why)'},
+  {id:'cp5', title:'CP5 — CAPSTONE: real agency automation script, no AI, no ref'},
+];
+const MILESTONES = [
+  {id:'M1', title:'One-page static site, live on Vercel — zero 3D, zero scroll'},
+  {id:'M2', title:'Lenis + GSAP, 3 scroll beats, one pinned+scrubbed'},
+  {id:'M3', title:'GLB hero object, transmission material, ≤60 draw calls'},
+  {id:'M4', title:'Postprocessing composite, loader, mobile fallback — SHIP'},
+];
+
+let state = {
+  python: { logs:{}, checkpoints:{} },
+  cine: { heroProduct:'', shipDate:'', toldTo:'', sessions:[] }
+};
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function daysAgoISO(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){ /* no saved state yet */ }
+  render();
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ console.error('save failed', e); }
+}
+
+function computeStreak(){
+  let streak = 0;
+  for(let i=0;;i++){
+    const d = daysAgoISO(i);
+    if(state.python.logs[d]) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderPulse(){
+  const strip = document.getElementById('pulse-strip');
+  strip.innerHTML = '';
+  const today = todayISO();
+  for(let i=29;i>=0;i--){
+    const d = daysAgoISO(i);
+    const div = document.createElement('div');
+    div.className = 'pulse-day' + (state.python.logs[d] ? ' done':'') + (d===today ? ' today':'');
+    div.title = d;
+    div.onclick = () => {
+      if(state.python.logs[d]) delete state.python.logs[d];
+      else state.python.logs[d] = true;
+      save(); render();
+    };
+    strip.appendChild(div);
+  }
+  document.getElementById('py-streak').textContent = 'streak: ' + computeStreak();
+}
+
+function daysBetween(a,b){ return Math.floor((new Date(b) - new Date(a)) / 86400000); }
+
+function renderCheckpoints(){
+  const wrap = document.getElementById('checkpoints');
+  wrap.innerHTML = '';
+  CHECKPOINTS.forEach((cp, idx) => {
+    const rec = state.python.checkpoints[cp.id] || {};
+    const div = document.createElement('div');
+    div.className = 'cp' + (rec.done ? ' done':'');
+    let badge = '';
+    if(rec.started && !rec.done){
+      const dstart = daysBetween(rec.started, todayISO());
+      if(dstart >= 3 && dstart < 7) badge = '<span class="badge due">retest: 3d</span>';
+      else if(dstart >= 7) badge = '<span class="badge due">retest: 1wk</span>';
+    }
+    div.innerHTML = `
+      <input type="checkbox" ${rec.done?'checked':''} data-cp="${cp.id}">
+      <div class="cp-title">${cp.title}${badge}
+        <span class="cp-confirm">${rec.done ? 'confirmed unaided, no notes' : (rec.started ? 'in progress since '+rec.started : 'not started')}</span>
+      </div>`;
+    const box = div.querySelector('input');
+    box.onchange = () => {
+      if(!state.python.checkpoints[cp.id]) state.python.checkpoints[cp.id] = {};
+      if(box.checked){
+        if(!confirm('Confirm: explained/built this unaided, no AI, no reference open?')){ box.checked = false; return; }
+        state.python.checkpoints[cp.id].done = true;
+      } else {
+        state.python.checkpoints[cp.id].done = false;
+      }
+      if(!state.python.checkpoints[cp.id].started) state.python.checkpoints[cp.id].started = todayISO();
+      save(); render();
+    };
+    wrap.appendChild(div);
+  });
+}
+
+function renderRail(){
+  document.getElementById('hero-product').value = state.cine.heroProduct || '';
+  document.getElementById('ship-date').value = state.cine.shipDate || '';
+  document.getElementById('told-to').value = state.cine.toldTo || '';
+
+  const blocked = !state.cine.heroProduct || !state.cine.shipDate || !state.cine.toldTo;
+  document.getElementById('blocking-banner').className = 'blocking-banner' + (blocked ? '' : ' clear');
+  document.getElementById('log-session').disabled = blocked;
+
+  const rail = document.getElementById('rail');
+  rail.innerHTML = '';
+  const sessionCount = state.cine.sessions.length;
+  const currentIdx = Math.min(Math.floor(sessionCount / 4), MILESTONES.length - 1);
+  MILESTONES.forEach((m, idx) => {
+    const div = document.createElement('div');
+    div.className = 'stop' + (idx < currentIdx ? ' past' : idx === currentIdx ? ' current' : '');
+    div.innerHTML = `
+      <div class="stop-marker">${idx < currentIdx ? '✓' : m.id}</div>
+      <div class="stop-body">
+        <div class="s-title">${m.title}</div>
+      </div>`;
+    rail.appendChild(div);
+  });
+
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  const thisWeek = state.cine.sessions.filter(s => new Date(s.date) >= weekStart).length;
+  document.getElementById('cine-week').textContent = 'this wk: ' + thisWeek + '/2';
+
+  const log = document.getElementById('session-log');
+  if(sessionCount === 0){
+    log.innerHTML = '<div class="empty">no sessions logged yet</div>';
+  } else {
+    log.innerHTML = '';
+    state.cine.sessions.slice(-5).reverse().forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'session-item';
+      div.innerHTML = `<div class="s-date">${s.date} · ${s.hours}h</div><div>${s.note.replace(/</g,'&lt;')}</div>`;
+      log.appendChild(div);
+    });
+  }
+}
+
+function renderFooter(){
+  const pyHours = Object.keys(state.python.logs).filter(d => {
+    const now = new Date(); const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+    return new Date(d) >= weekStart;
+  }).length * 0.6; // approx midpoint of 30-45min
+  const now = new Date(); const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  const cineHours = state.cine.sessions.filter(s => new Date(s.date) >= weekStart).reduce((a,s)=>a+Number(s.hours||0),0);
+  document.getElementById('week-total').textContent = (pyHours + cineHours).toFixed(1) + 'h';
+}
+
+function render(){
+  renderPulse();
+  renderCheckpoints();
+  renderRail();
+  renderFooter();
+}
+
+document.getElementById('hero-product').oninput = e => { state.cine.heroProduct = e.target.value; save(); renderRail(); };
+document.getElementById('ship-date').oninput = e => { state.cine.shipDate = e.target.value; save(); renderRail(); };
+document.getElementById('told-to').oninput = e => { state.cine.toldTo = e.target.value; save(); renderRail(); };
+
+document.getElementById('log-session').onclick = () => {
+  const note = document.getElementById('session-note').value.trim();
+  const hours = document.getElementById('session-hours').value || '2';
+  if(!note){ alert('Add a 2-line handoff note first.'); return; }
+  state.cine.sessions.push({ date: todayISO(), note, hours });
+  document.getElementById('session-note').value = '';
+  document.getElementById('session-hours').value = '';
+  save(); render();
+};
+
+load();
+</script>
+</body>
+</html>
