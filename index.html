@@ -86,6 +86,14 @@
   .pulse-day.today{outline:2px solid var(--text);outline-offset:1px;}
   .hint{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
   .checkpoints{display:flex;flex-direction:column;gap:8px;}
+  .phase-block{margin-bottom:18px;}
+  .phase-block:last-child{margin-bottom:0;}
+  .phase-head{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;margin:0 0 2px;}
+  .phase-meta{font-size:11px;color:var(--text-muted);margin:0 0 10px;font-family:'JetBrains Mono',monospace;}
+  .phase-meta em{font-style:normal;}
+  .overall-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:12px 0 4px;}
+  .overall-bar-inner{height:100%;background:var(--py);transition:width .3s;}
+  .overall-pct{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;display:block;margin-bottom:16px;}
   .cp{
     display:flex;align-items:flex-start;gap:10px;
     padding:10px 12px;
@@ -95,6 +103,7 @@
     font-size:13px;
   }
   .cp.done{opacity:.55;}
+  .cp.milestone{border-color:var(--py);background:rgba(232,163,61,.08);}
   .cp input[type=checkbox]{margin-top:2px;accent-color:var(--py);}
   .cp .cp-title{flex:1;}
   .cp .cp-confirm{
@@ -224,7 +233,9 @@
       </div>
       <div class="hint">Tap today's square when you've done unaided practice (AI off).</div>
       <div class="pulse-strip" id="pulse-strip"></div>
-      <div class="checkpoints" id="checkpoints"></div>
+      <div class="overall-bar"><div class="overall-bar-inner" id="overall-bar-inner"></div></div>
+      <span class="overall-pct" id="overall-pct">0/0 curriculum items · 0%</span>
+      <div class="phases" id="phases"></div>
     </div>
 
     <!-- CINE CARD -->
@@ -271,13 +282,38 @@
 
 <script>
 const KEY = 'dual-track-state';
-const CHECKPOINTS = [
-  {id:'cp1', title:'CP1 — variables/control flow/functions (CLI script solo)'},
-  {id:'cp2', title:'CP2 — data structures + string ops (parse/transform data solo)'},
-  {id:'cp3', title:'CP3 — file I/O + try/except (read/write, handle bad input, solo)'},
-  {id:'cp4', title:'CP4 — basic OOP (model one thing as a class, explain why)'},
-  {id:'cp5', title:'CP5 — CAPSTONE: real agency automation script, no AI, no ref'},
+// GOAL: cold, no AI, no book open — read a CSV of leads, drop rows with a website,
+// sort by district, write a new CSV. Must pass on messy real data.
+const PHASES = [
+  {
+    id:'p1', title:'Phase 1 — Fundamentals', source:'Automate the Boring Stuff, ch.1–6',
+    goal:'Write logic without looking anything up.',
+    items:[
+      {id:'1a', t:'ch.1–2 basics', his:'FizzBuzz from memory, book closed.'},
+      {id:'1b', t:'ch.3 functions', his:'Write is_prime(n) cold. Test 1, 2, 17, 100.'},
+      {id:'1c', t:'ch.4 lists', his:'Reverse a list without .reverse() or [::-1].'},
+      {id:'1d', t:'ch.5 dicts', his:'Count word frequency in a paragraph → dict.'},
+      {id:'1e', t:'ch.6 strings', his:'Clean a phone string to digits only, no regex yet.'},
+    ],
+  },
+  {
+    id:'p2', title:'Phase 2 — Text & Patterns', source:'Automate ch.7',
+    goal:'Find and reshape text patterns.',
+    items:[
+      {id:'2a', t:'ch.7 regex', his:'Extract every phone number from a messy text block.'},
+    ],
+  },
+  {
+    id:'p3', title:'Phase 3 — Files & Data (the payoff)', source:'Automate ch.9 + ch.16',
+    goal:'Read/write real files. This is where the milestone lives.',
+    items:[
+      {id:'3a', t:'ch.9 files/paths', his:'Rename every .txt in a folder to lowercase.'},
+      {id:'3b', t:'ch.16 CSV', his:'Read a CSV, print rows where a column is empty.'},
+      {id:'3c', t:'MILESTONE', his:'Leads CSV → drop rows that have a website → sort by district → write new CSV. Must survive missing fields + weird encoding. No AI, no book.', milestone:true},
+    ],
+  },
 ];
+const ALL_ITEMS = PHASES.flatMap(p => p.items.map(i => i.id));
 const MILESTONES = [
   {id:'M1', title:'One-page static site, live on Vercel — zero 3D, zero scroll'},
   {id:'M2', title:'Lenis + GSAP, 3 scroll beats, one pinned+scrubbed'},
@@ -336,38 +372,52 @@ function renderPulse(){
 
 function daysBetween(a,b){ return Math.floor((new Date(b) - new Date(a)) / 86400000); }
 
-function renderCheckpoints(){
-  const wrap = document.getElementById('checkpoints');
+function renderPhases(){
+  const wrap = document.getElementById('phases');
   wrap.innerHTML = '';
-  CHECKPOINTS.forEach((cp, idx) => {
-    const rec = state.python.checkpoints[cp.id] || {};
-    const div = document.createElement('div');
-    div.className = 'cp' + (rec.done ? ' done':'');
-    let badge = '';
-    if(rec.started && !rec.done){
-      const dstart = daysBetween(rec.started, todayISO());
-      if(dstart >= 3 && dstart < 7) badge = '<span class="badge due">retest: 3d</span>';
-      else if(dstart >= 7) badge = '<span class="badge due">retest: 1wk</span>';
-    }
-    div.innerHTML = `
-      <input type="checkbox" ${rec.done?'checked':''} data-cp="${cp.id}">
-      <div class="cp-title">${cp.title}${badge}
-        <span class="cp-confirm">${rec.done ? 'confirmed unaided, no notes' : (rec.started ? 'in progress since '+rec.started : 'not started')}</span>
-      </div>`;
-    const box = div.querySelector('input');
-    box.onchange = () => {
-      if(!state.python.checkpoints[cp.id]) state.python.checkpoints[cp.id] = {};
-      if(box.checked){
-        if(!confirm('Confirm: explained/built this unaided, no AI, no reference open?')){ box.checked = false; return; }
-        state.python.checkpoints[cp.id].done = true;
-      } else {
-        state.python.checkpoints[cp.id].done = false;
+  PHASES.forEach(ph => {
+    const block = document.createElement('div');
+    block.className = 'phase-block';
+    block.innerHTML = `<div class="phase-head">${ph.title}</div><div class="phase-meta">${ph.source} — <em>${ph.goal}</em></div>`;
+    const list = document.createElement('div');
+    list.className = 'checkpoints';
+    ph.items.forEach(it => {
+      const rec = state.python.checkpoints[it.id] || {};
+      const div = document.createElement('div');
+      div.className = 'cp' + (rec.done ? ' done':'') + (it.milestone ? ' milestone':'');
+      let badge = '';
+      if(rec.started && !rec.done){
+        const dstart = daysBetween(rec.started, todayISO());
+        if(dstart >= 3 && dstart < 7) badge = '<span class="badge due">retest: 3d</span>';
+        else if(dstart >= 7) badge = '<span class="badge due">retest: 1wk</span>';
       }
-      if(!state.python.checkpoints[cp.id].started) state.python.checkpoints[cp.id].started = todayISO();
-      save(); render();
-    };
-    wrap.appendChild(div);
+      div.innerHTML = `
+        <input type="checkbox" ${rec.done?'checked':''} data-item="${it.id}">
+        <div class="cp-title">${it.t}${badge}
+          <span class="cp-confirm">your turn: ${it.his}</span>
+        </div>`;
+      const box = div.querySelector('input');
+      box.onchange = () => {
+        if(!state.python.checkpoints[it.id]) state.python.checkpoints[it.id] = {};
+        if(box.checked){
+          if(!confirm('Confirm: built this unaided, no AI, no reference open?')){ box.checked = false; return; }
+          state.python.checkpoints[it.id].done = true;
+        } else {
+          state.python.checkpoints[it.id].done = false;
+        }
+        if(!state.python.checkpoints[it.id].started) state.python.checkpoints[it.id].started = todayISO();
+        save(); render();
+      };
+      list.appendChild(div);
+    });
+    block.appendChild(list);
+    wrap.appendChild(block);
   });
+
+  const doneCount = ALL_ITEMS.filter(id => state.python.checkpoints[id] && state.python.checkpoints[id].done).length;
+  const pct = ALL_ITEMS.length ? Math.round((doneCount / ALL_ITEMS.length) * 100) : 0;
+  document.getElementById('overall-bar-inner').style.width = pct + '%';
+  document.getElementById('overall-pct').textContent = doneCount + '/' + ALL_ITEMS.length + ' curriculum items · ' + pct + '%';
 }
 
 function renderRail(){
@@ -425,7 +475,7 @@ function renderFooter(){
 
 function render(){
   renderPulse();
-  renderCheckpoints();
+  renderPhases();
   renderRail();
   renderFooter();
 }
